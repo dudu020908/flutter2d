@@ -5,49 +5,59 @@ import 'game.dart';
 import 'platform.dart';
 import 'obstacle.dart';
 
-class Player extends SpriteComponent with HasGameRef<MyPlatformerGame>, CollisionCallbacks { // 🔥 충돌 감지 추가
+class Player extends SpriteComponent with HasGameRef<MyPlatformerGame>, CollisionCallbacks {
   static const double gravity = 600;
   static const double jumpForce = -300;
   static const double speed = 200;
   double velocityY = 0;
-  double velocityX = 0;
-  bool isOnGround = false; // 🔥 바닥에 있는지 여부 확인
+  bool isOnGround = false;
+  Vector2 moveDirection = Vector2.zero();
 
   @override
   Future<void> onLoad() async {
     sprite = await gameRef.loadSprite('player.png');
     size = Vector2(50, 50);
-    position = Vector2(100, gameRef.size.y - 150); // 시작 위치 조정
+    position = Vector2(100, gameRef.size.y - 150);
     add(RectangleHitbox()); // 🔥 충돌 감지 추가
   }
 
   void jump() {
-    if (isOnGround) { // 🔥 바닥에 있을 때만 점프 가능
+    if (isOnGround) {
       velocityY = jumpForce;
       isOnGround = false;
-      print("점프!");
+    }
+  }
+
+  void moveLeft() {
+    moveDirection.x = -1;
+  }
+
+  void moveRight() {
+    moveDirection.x = 1;
+  }
+
+  void stopMoving() {
+    moveDirection.x = 0;
+  }
+
+  void updateJoystick(Vector2 joystickDelta) {
+    if (joystickDelta.x.abs() > 0.1) {
+      moveDirection.x = joystickDelta.x.sign;
+    } else {
+      stopMoving();
     }
   }
 
   @override
   void update(double dt) {
-    velocityY += gravity * dt; // 중력 적용
+    velocityY += gravity * dt;
     position.y += velocityY * dt;
-    position.x += velocityX * dt;
+    position.x += moveDirection.x * speed * dt;
 
-    // 🔥 화면 경계를 벗어나지 않도록 제한
-    final screenWidth = gameRef.size.x;
-    final screenHeight = gameRef.size.y;
+    position.x = position.x.clamp(0, gameRef.size.x - size.x);
 
-    if (position.x < 0) {
-      position.x = 0;
-    }
-    if (position.x + size.x > screenWidth) {
-      position.x = screenWidth - size.x;
-    }
-
-    if (position.y >= screenHeight - size.y) {
-      position.y = screenHeight - size.y;
+    if (position.y >= gameRef.size.y - size.y) {
+      position.y = gameRef.size.y - size.y;
       velocityY = 0;
       isOnGround = true;
     }
@@ -58,15 +68,15 @@ class Player extends SpriteComponent with HasGameRef<MyPlatformerGame>, Collisio
     super.onCollision(intersectionPoints, other);
 
     if (other is Platform) {
-      if (velocityY > 0) { // 아래로 떨어질 때만 반응
-        position.y = other.position.y - size.y; // 🔥 플랫폼 위에 착지
+      if (velocityY > 0) {
+        position.y = other.position.y - size.y;
         velocityY = 0;
         isOnGround = true;
       }
     }
 
     if (other is Obstacle) {
-      position = Vector2(100, gameRef.size.y - 150); // 플레이어 초기 위치로 이동
+      position = Vector2(100, gameRef.size.y - 150);
       velocityY = 0;
       isOnGround = true;
     }
@@ -75,9 +85,9 @@ class Player extends SpriteComponent with HasGameRef<MyPlatformerGame>, Collisio
   void handleKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        velocityX = -speed;
+        moveLeft();
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        velocityX = speed;
+        moveRight();
       } else if (event.logicalKey == LogicalKeyboardKey.space) {
         jump();
       }
@@ -86,7 +96,7 @@ class Player extends SpriteComponent with HasGameRef<MyPlatformerGame>, Collisio
     if (event is KeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
           event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        velocityX = 0;
+        stopMoving();
       }
     }
   }

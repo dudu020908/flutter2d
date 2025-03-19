@@ -1,22 +1,22 @@
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
+import 'game.dart';
 
-class Obstacle extends PositionComponent with CollisionCallbacks { // 🔥 충돌 감지 추가
+class Obstacle extends PositionComponent with HasGameRef<MyPlatformerGame>, CollisionCallbacks {
   Obstacle(Vector2 position, Vector2 size) {
     this.position = position;
     this.size = size;
-    anchor = Anchor.center;
   }
 
   @override
   Future<void> onLoad() async {
-    add(RectangleHitbox()); // 🔥 충돌 감지를 위한 Hitbox 추가
+    add(RectangleHitbox());
   }
 
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = Colors.red;
+    final paint = Paint()..color = const Color(0xFFFF0000);
     canvas.drawRect(size.toRect(), paint);
   }
 }
